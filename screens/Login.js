@@ -2,12 +2,38 @@ import { View, Text, Button, StyleSheet } from "react-native";
 import React, { useState } from "react";
 import { FIREBASE_AUTH } from "../FirebaseConfig";
 import { TextInput } from "react-native-gesture-handler";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const auth = FIREBASE_AUTH;
+
+  const signIn = async () => {
+    try {
+      setLoading(true);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUp = async () => {
+    try {
+      setLoading(true);
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -27,17 +53,14 @@ const Login = () => {
         onChangeText={(text) => setPassword(text)}
         secureTextEntry
       />
-      <View style={styles.button}>
-        <Button
-          title="Login"
-          color="#fff"
-          onPress={() => {
-            setLoading(true);
-            // Add your login logic here
-          }}
-        />
-      </View>
-      {loading && <ActivityIndicator style={styles.loading} size="small" />}
+      {loading ? (
+        <ActivityIndicator style={styles.loading} size="small" />
+      ) : (
+        <>
+          <Button title="Login" onPress={signIn} />
+          <Button title="Sign Up" onPress={signUp} />
+        </>
+      )}
     </View>
   );
 };

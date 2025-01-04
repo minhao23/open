@@ -1,15 +1,29 @@
-import * as React from "react";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import HomeScreen from "../screens/HomeScreen";
-import ProfileNavigator from "./ProfileNavigator";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack"; // use native stack navigator for better performance
+import React from "react";
+import HomeScreen from "../screens/HomeScreen"; // Adjust the path if needed
+import SignUp from "../screens/SignUp"; // Adjust the path if needed
+import Login from "../screens/Login"; // Adjust the path if needed
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator(); // Use native stack for better performance
 
-const StackNavigator = () => (
-  <Stack.Navigator>
-    <Stack.Screen name="Home" component={HomeScreen} />
-    <Stack.Screen name="Profile" component={ProfileNavigator} />
-  </Stack.Navigator>
-);
+const AppNavigator = ({ isAuthenticated }) => {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        {isAuthenticated ? (
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} options={}/>
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="SignUp" component={SignUp} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
 
-export default StackNavigator;
+export default AppNavigator;

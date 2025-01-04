@@ -1,22 +1,30 @@
-import { View, Text, Button, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Button,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ActivityIndicator,
+} from "react-native";
 import React, { useState } from "react";
 import { FIREBASE_AUTH } from "../FirebaseConfig";
 import { TextInput } from "react-native-gesture-handler";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useNavigation } from "@react-navigation/native";
+import { SignUp } from "./SignUp";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const auth = FIREBASE_AUTH;
+  const navigation = useNavigation();
 
   const signIn = async () => {
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
+      // Add navigation to the next screen after successful login
     } catch (error) {
       console.error(error);
     } finally {
@@ -24,28 +32,24 @@ const Login = () => {
     }
   };
 
-  const signUp = async () => {
-    try {
-      setLoading(true);
-      await createUserWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const navigateToSignUp = () => {
+    navigation.navigate("SignUp"); // Assuming "SignUp" is the route for your sign-up page
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={(text) => setEmail(text)}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+      <KeyboardAvoidingView behavior="padding">
+        <Text style={styles.title}>Login</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Email/Phone Number"
+          value={email}
+          onChangeText={(text) => setEmail(text)}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </KeyboardAvoidingView>
+
       <TextInput
         style={styles.input}
         placeholder="Password"
@@ -58,7 +62,7 @@ const Login = () => {
       ) : (
         <>
           <Button title="Login" onPress={signIn} />
-          <Button title="Sign Up" onPress={signUp} />
+          <Button title="Sign Up" onPress={navigateToSignUp} />
         </>
       )}
     </View>
@@ -82,19 +86,6 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     borderRadius: 8,
     backgroundColor: "#fff",
-  },
-  button: {
-    marginTop: 10,
-    padding: 15,
-    borderRadius: 8,
-    backgroundColor: "#116466",
-    alignItems: "center",
-    width: "100%",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
   },
   title: {
     fontSize: 24,

@@ -60,7 +60,7 @@ const Login = () => {
       }
 
       alert("Login successful!");
-      // Add navigation to the next screen
+      //navigation.replace("Home");
     } catch (error) {
       console.error("Error during login:", error);
       alert(error.message);

@@ -6,6 +6,9 @@ import HomeScreen from "./screens/HomeScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import Login from "./screens/Login";
 import AppNavigator from "./navigation/StackNavigator";
+import { useEffect, useState } from "react";
+import { FIREBASE_AUTH } from "./FirebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function App() {
   return (

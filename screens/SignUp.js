@@ -4,164 +4,174 @@ import {
   Text,
   Button,
   StyleSheet,
-  KeyboardAvoidingView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Alert,
 } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { FIREBASE_AUTH, FIREBASE_DB } from "../FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { useFonts } from "expo-font";
 
 const SignUp = () => {
   const [identifier, setIdentifier] = useState(""); // Email or phone number
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isPhone, setIsPhone] = useState(false);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const auth = FIREBASE_AUTH;
   const db = FIREBASE_DB;
   const navigation = useNavigation();
+  const [fontsLoaded] = useFonts({
+    "Rubik-Regular": require("../assets/fonts/Rubik/static/Rubik-Regular.ttf"),
+    "Rubik-Bold": require("../assets/fonts/Rubik/static/Rubik-Bold.ttf"),
+  });
 
   const handleSignUp = async () => {
     if (!username.trim()) {
-      alert("Username cannot be empty.");
+      Alert.alert("Validation Error", "Username cannot be empty.");
+      return;
+    }
+
+    if (!email.trim()) {
+      Alert.alert("Validation Error", "Email cannot be empty.");
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match. Please try again.");
+      Alert.alert(
+        "Validation Error",
+        "Passwords do not match. Please try again."
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      if (isPhone) {
-        // Phone number sign-up
-        const appVerifier = new RecaptchaVerifier(
-          "recaptcha-container",
-          {},
-          auth
-        );
-        const confirmationResult = await signInWithPhoneNumber(
-          auth,
-          identifier,
-          appVerifier
-        );
+      // Firebase email sign-up
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
-        // Prompt the user for the OTP sent to their phone
-        const otp = prompt("Enter the OTP sent to your phone");
-        const userCredential = await confirmationResult.confirm(otp);
+      const user = userCredential.user;
 
-        const user = userCredential.user;
+      // Update Firebase profile with username
+      await updateProfile(user, { displayName: username });
 
-        // Update the user's profile
-        await updateProfile(user, { displayName: username });
+      // Save user data to Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        username: username,
+        createdAt: new Date(),
+      });
 
-        // Add user details to Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          phone: user.phoneNumber,
-          username: username,
-          createdAt: new Date(),
-        });
-      } else {
-        // Email sign-up
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          identifier,
-          password
-        );
-
-        const user = userCredential.user;
-
-        // Update the user's profile
-        await updateProfile(user, { displayName: username });
-
-        // Add user details to Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          email: user.email,
-          username: username,
-          createdAt: new Date(),
-        });
-      }
-
-      alert("Sign-up successful!");
-      navigation.navigate("Login"); // Navigate back to login page after successful sign-up
+      Alert.alert("Success", "Sign-up successful!");
+      navigation.navigate("Login");
     } catch (error) {
       console.error("Error signing up: ", error);
-      alert(error.message);
+
+      // Enhanced error handling
+      let errorMessage =
+        "An unexpected error occurred. Please try again later.";
+      if (error.code) {
+        switch (error.code) {
+          case "auth/email-already-in-use":
+            errorMessage =
+              "This email is already in use. Please use a different email or sign in.";
+            break;
+          case "auth/invalid-email":
+            errorMessage =
+              "The email address is invalid. Please enter a valid email.";
+            break;
+          case "auth/weak-password":
+            errorMessage =
+              "The password is too weak. Please use a stronger password (at least 6 characters).";
+            break;
+          case "auth/operation-not-allowed":
+            errorMessage =
+              "Email/password accounts are not enabled. Please contact support.";
+            break;
+          case "auth/network-request-failed":
+            errorMessage =
+              "A network error occurred. Please check your internet connection.";
+            break;
+          case "firestore/permission-denied":
+            errorMessage =
+              "Permission denied. Please ensure proper Firestore rules are set.";
+            break;
+          default:
+            errorMessage = error.message || errorMessage;
+            break;
+        }
+      }
+
+      Alert.alert("Sign-Up Error", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleAuthMode = () => {
-    setIsPhone(!isPhone);
-    setIdentifier("");
-    setPassword("");
-    setConfirmPassword(""); // Reset confirm password when switching modes
-  };
-
   return (
-    <View style={styles.container}>
-      <KeyboardAvoidingView behavior="padding">
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.container}
+      >
         <Text style={styles.title}>Sign Up</Text>
 
+        {/* Input fields */}
         <TextInput
           style={styles.input}
           placeholder="Username"
           value={username}
           onChangeText={(text) => setUsername(text)}
         />
-
         <TextInput
           style={styles.input}
-          placeholder={
-            isPhone
-              ? "Phone Number (e.g., +1234567890), please include country code"
-              : "Email"
-          }
-          value={identifier}
-          onChangeText={(text) => setIdentifier(text)}
-          keyboardType={isPhone ? "phone-pad" : "email-address"}
+          placeholder="Email"
+          value={email}
+          onChangeText={(text) => setEmail(text)}
+          keyboardType="email-address"
           autoCapitalize="none"
         />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          value={password}
+          onChangeText={(text) => setPassword(text)}
+          secureTextEntry
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Confirm Password"
+          value={confirmPassword}
+          onChangeText={(text) => setConfirmPassword(text)}
+          secureTextEntry
+        />
 
-        <>
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={(text) => setPassword(text)}
-            secureTextEntry
+        {/* Sign-up Button or Loading Indicator */}
+        {loading ? (
+          <ActivityIndicator
+            style={styles.loading}
+            size="large"
+            color="#116466"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={(text) => setConfirmPassword(text)}
-            secureTextEntry
-          />
-        </>
-
-        <View id="recaptcha-container" />
-      </KeyboardAvoidingView>
-
-      {loading ? (
-        <ActivityIndicator style={styles.loading} size="small" />
-      ) : (
-        <>
+        ) : (
           <Button title="Sign Up" onPress={handleSignUp} />
-          <Button
-            title={`Switch to ${isPhone ? "Email" : "Phone"} Sign-Up`}
-            onPress={toggleAuthMode}
-          />
-        </>
-      )}
-    </View>
+        )}
+      </KeyboardAvoidingView>
+    </ScrollView>
   );
 };
 
@@ -188,11 +198,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 30,
     textAlign: "center",
+    fontFamily: "Rubik-Bold",
     color: "#333",
   },
   loading: {
-    marginTop: 10,
-    color: "#888",
+    marginTop: 20,
   },
 });
 

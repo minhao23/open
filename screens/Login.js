@@ -7,33 +7,70 @@ import {
   ActivityIndicator,
 } from "react-native";
 import React, { useState } from "react";
-import { FIREBASE_AUTH } from "../FirebaseConfig";
+import { FIREBASE_AUTH, FIREBASE_DB } from "../FirebaseConfig";
 import { TextInput } from "react-native-gesture-handler";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  signInWithPhoneNumber,
+} from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
-import { SignUp } from "./SignUp";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // Email, phone, or username
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const auth = FIREBASE_AUTH;
+  const db = FIREBASE_DB;
   const navigation = useNavigation();
+
+  const isEmail = (input) => /\S+@\S+\.\S+/.test(input);
+  const isPhone = (input) => /^\+\d{10,15}$/.test(input); // E.g., +1234567890
 
   const signIn = async () => {
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-      // Add navigation to the next screen after successful login
+
+      if (isEmail(identifier)) {
+        // Login with email
+        await signInWithEmailAndPassword(auth, identifier, password);
+      } else if (isPhone(identifier)) {
+        // Login with phone number
+        const appVerifier = new RecaptchaVerifier(
+          "recaptcha-container",
+          {},
+          auth
+        );
+        const confirmationResult = await signInWithPhoneNumber(
+          auth,
+          identifier,
+          appVerifier
+        );
+        const otp = prompt("Enter the OTP sent to your phone");
+        await confirmationResult.confirm(otp);
+      } else {
+        // Login with username
+        const userDoc = await getDoc(doc(db, "users", identifier));
+        if (userDoc.exists()) {
+          const userEmail = userDoc.data().email;
+          await signInWithEmailAndPassword(auth, userEmail, password);
+        } else {
+          throw new Error("Invalid username.");
+        }
+      }
+
+      alert("Login successful!");
+      // Add navigation to the next screen
     } catch (error) {
-      console.error(error);
+      console.error("Error during login:", error);
+      alert(error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const navigateToSignUp = () => {
-    navigation.navigate("SignUp"); // Assuming "SignUp" is the route for your sign-up page
+    navigation.navigate("SignUp");
   };
 
   return (
@@ -42,10 +79,9 @@ const Login = () => {
         <Text style={styles.title}>Login</Text>
         <TextInput
           style={styles.input}
-          placeholder="Email/Phone Number"
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-          keyboardType="email-address"
+          placeholder="Email, Phone, or Username"
+          value={identifier}
+          onChangeText={(text) => setIdentifier(text)}
           autoCapitalize="none"
         />
       </KeyboardAvoidingView>
@@ -65,6 +101,7 @@ const Login = () => {
           <Button title="Sign Up" onPress={navigateToSignUp} />
         </>
       )}
+      <View id="recaptcha-container" />
     </View>
   );
 };

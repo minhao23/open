@@ -31,7 +31,7 @@ const SignUp = () => {
       return;
     }
 
-    if (!isPhone && password !== confirmPassword) {
+    if (password !== confirmPassword) {
       alert("Passwords do not match. Please try again.");
       return;
     }
@@ -119,7 +119,11 @@ const SignUp = () => {
 
         <TextInput
           style={styles.input}
-          placeholder={isPhone ? "Phone Number (e.g., +1234567890)" : "Email"}
+          placeholder={
+            isPhone
+              ? "Phone Number (e.g., +1234567890), please include country code"
+              : "Email"
+          }
           value={identifier}
           onChangeText={(text) => setIdentifier(text)}
           keyboardType={isPhone ? "phone-pad" : "email-address"}

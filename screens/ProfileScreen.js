@@ -8,7 +8,6 @@ export default function ProfileScreen() {
 
   const handleSave = () => {
     setIsEditing(false);
-    // Save logic here
   };
 
   return (
